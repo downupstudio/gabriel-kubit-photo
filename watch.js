@@ -63,7 +63,7 @@ function rebuildAndPush() {
   if (!run('git add .')) return;
   if (!run(`git commit -m "${msg}"`)) return;
   if (!run('git push')) {
-    console.error('   ✗ push failed — is your SSH key passphrase-free? (see notes)');
+    console.error('   ✗ push failed');
     return;
   }
   console.log('   ✓ pushed');
