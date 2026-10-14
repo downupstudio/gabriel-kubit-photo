@@ -8,24 +8,32 @@ const IMAGE_EXT = ['.jpg', '.jpeg', '.png', '.webp', '.avif', '.gif'];
 const isImage = (f) => IMAGE_EXT.includes(path.extname(f).toLowerCase());
 
 function run(cmd) {
-  try { execSync(cmd, { cwd: ROOT, stdio: 'inherit' }); }
-  catch (e) { console.error(`✗ ${cmd} failed`); }
+  try {
+    execSync(cmd, { cwd: ROOT, stdio: 'inherit' });
+    return true;
+  } catch {
+    console.error(`✗ ${cmd} failed`);
+    return false;
+  }
 }
 
 function rebuildAndPush() {
   console.log('\n→ regenerating…');
-  run('node generate.js');
+  if (!run('node generate.js')) return;
 
   console.log('→ git…');
+  let status = '';
   try {
-    const status = execSync('git status --porcelain', { cwd: ROOT }).toString().trim();
-    if (!status) { console.log('   nothing to commit'); return; }
+    status = execSync('git status --porcelain', { cwd: ROOT }).toString().trim();
   } catch { return; }
 
-  run('git add .');
+  if (!status) { console.log('   nothing to commit\n'); return; }
+
   const msg = `update photos ${new Date().toISOString().slice(0, 19).replace('T', ' ')}`;
-  run(`git commit -m "${msg}"`);
-  run('git push');
+  if (!run('git add .')) return;
+  if (!run(`git commit -m "${msg}"`)) return;
+  if (!run('git push')) return;
+
   console.log('✓ pushed\n');
 }
 
