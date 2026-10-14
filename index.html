@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>GABRIEL KUBIT - PHOTOGRAPHY/title>
+<meta name="description" content="Photography">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@300;400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/style.css">
+</head>
+<body>
+
+<nav class="nav" id="nav">
+  <div class="nav__left">
+    <button class="menu-btn" id="menuBtn" data-state="menu" aria-label="Menu" aria-expanded="false">
+      <span class="menu-btn__line"></span>
+      <span class="menu-btn__line"></span>
+    </button>
+  </div>
+  <div class="nav__center">
+    <button class="nav__title" id="navTitle">ALL</button>
+  </div>
+  <div class="nav__right">
+    <button class="nav__action" id="infoBtn">INFO</button>
+  </div>
+</nav>
+
+<div class="menu" id="menu" data-open="false">
+  <ul class="menu__list" id="menuList"></ul>
+</div>
+
+<main class="page">
+  <div class="nav-spacer"></div>
+  <div id="view"></div>
+  <footer class="footer">
+    <ul class="footer__list" id="footerList"></ul>
+  </footer>
+</main>
+
+<div class="lightbox" id="lightbox" data-open="false" role="dialog" aria-modal="true" aria-label="Photo">
+  <div class="lightbox__bar">
+    <span class="lightbox__counter" id="lbCounter"></span>
+    <button class="lightbox__close" id="lbClose">CLOSE</button>
+  </div>
+  <div class="lightbox__body">
+    <button class="lightbox__nav lightbox__nav--prev" id="lbPrev" aria-label="Previous">&#8592;</button>
+    <img class="lightbox__img" id="lbImg" alt="">
+    <button class="lightbox__nav lightbox__nav--next" id="lbNext" aria-label="Next">&#8594;</button>
+  </div>
+  <div class="lightbox__foot">
+    <p class="lightbox__title" id="lbTitle"></p>
+    <p class="lightbox__desc" id="lbDesc"></p>
+  </div>
+</div>
+
+<script src="assets/app.js" type="module"></script>
+</body>
+</html>
