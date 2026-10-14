@@ -71,21 +71,6 @@ function renderMenu() {
   });
 }
 
-function renderFooter() {
-  const list = $('#footerList');
-  list.innerHTML = '';
-  ['Contact', 'Terms', 'Privacy', 'Accessibility', 'DNSMPI', 'Cookies', 'Order Status']
-    .forEach(text => {
-      const li = document.createElement('li');
-      const a = document.createElement('a');
-      a.href = '#';
-      a.textContent = text;
-      a.addEventListener('click', (e) => e.preventDefault());
-      li.appendChild(a);
-      list.appendChild(li);
-    });
-}
-
 function allPhotos() {
   return data.folders.flatMap(f => f.photos.map(p => ({ ...p, folder: f.name })));
 }
@@ -119,24 +104,21 @@ function renderView() {
     return;
   }
 
-  const chain = ancestorChain(currentFolder);
-  const descs = chain.filter(f => f.description);
-  if (descs.length) {
+  const current = data.folders.find(f => f.name === currentFolder);
+  if (current && current.description) {
     const intro = document.createElement('div');
     intro.className = 'intro';
-    descs.forEach(f => {
-      const block = document.createElement('div');
-      block.className = 'intro__block';
-      const h = document.createElement('h2');
-      h.className = 'intro__title';
-      h.textContent = f.name.split('/').pop().toUpperCase();
-      const p = document.createElement('p');
-      p.className = 'intro__text';
-      p.textContent = f.description;
-      block.appendChild(h);
-      block.appendChild(p);
-      intro.appendChild(block);
-    });
+    const block = document.createElement('div');
+    block.className = 'intro__block';
+    const h = document.createElement('h2');
+    h.className = 'intro__title';
+    h.textContent = currentFolder.split('/').pop().toUpperCase();
+    const p = document.createElement('p');
+    p.className = 'intro__text';
+    p.textContent = current.description;
+    block.appendChild(h);
+    block.appendChild(p);
+    intro.appendChild(block);
     view.appendChild(intro);
   }
 

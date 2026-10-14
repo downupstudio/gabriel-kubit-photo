@@ -224,30 +224,6 @@ a {
   text-transform: uppercase;
 }
 
-.footer {
-  margin-top: auto;
-  padding: 32px 16px 40px;
-  display: flex;
-  justify-content: center;
-}
-.footer__list {
-  list-style: none;
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: center;
-  gap: 16px;
-  font-size: 0.7rem;
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
-}
-.footer__list a, .footer__list button {
-  opacity: 0.5;
-  transition: opacity 0.2s;
-  font-size: inherit;
-  letter-spacing: inherit;
-}
-.footer__list a:hover, .footer__list button:hover { opacity: 1; }
-
 .lightbox {
   position: fixed;
   inset: 0;
