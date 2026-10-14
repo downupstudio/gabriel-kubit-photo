@@ -12,28 +12,13 @@
 </head>
 <body>
 
-<nav class="nav" id="nav">
-  <div class="nav__left">
-    <button class="menu-btn" id="menuBtn" data-state="close" aria-label="Menu" aria-expanded="true">
-      <span class="menu-btn__line"></span>
-      <span class="menu-btn__line"></span>
-    </button>
-  </div>
-  <div class="nav__center">
-    <button class="nav__title" id="navTitle">ALL</button>
-  </div>
-  <div class="nav__right">
-    <button class="nav__action" id="infoBtn">INFO</button>
-  </div>
+<nav class="nav">
+  <div class="breadcrumb" id="breadcrumb"></div>
 </nav>
 
-<div class="menu" id="menu" data-open="true">
-  <ul class="menu__list" id="menuList"></ul>
-</div>
-
-<main class="page">
-  <div class="nav-spacer"></div>
-  <div id="view"></div>
+<main class="explorer">
+  <section class="explorer__main" id="explorerMain"></section>
+  <aside class="explorer__desc" id="explorerDesc"></aside>
 </main>
 
 <div class="lightbox" id="lightbox" data-open="false" role="dialog" aria-modal="true" aria-label="Photo">
@@ -51,7 +36,7 @@
     <p class="lightbox__desc" id="lbDesc"></p>
   </div>
 </div>
-<br>
+
 <script src="assets/app.js" type="module"></script>
 </body>
 </html>

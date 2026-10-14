@@ -1,6 +1,6 @@
 let data = null;
-let currentFolder = null;   
-let currentPhotos = [];
+let currentPath = '';       
+let lightboxPhotos = [];
 let lightboxIndex = 0;
 
 const $ = (s) => document.querySelector(s);
@@ -9,216 +9,228 @@ async function init() {
   const res = await fetch('./data.json');
   data = await res.json();
 
-  renderMenu();
-  renderFooter();
   renderView();
-
-  $('#menuBtn').addEventListener('click', toggleMenu);
-  $('#navTitle').addEventListener('click', () => {
-    currentFolder = null;
-    renderView();
-    closeMenu();
-  });
 
   $('#lbClose').addEventListener('click', closeLightbox);
   $('#lbPrev').addEventListener('click', () => navLightbox(-1));
   $('#lbNext').addEventListener('click', () => navLightbox(1));
 
   document.addEventListener('keydown', (e) => {
-    if (e.key === 'Escape') { closeLightbox(); closeMenu(); }
+    if (e.key === 'Escape') closeLightbox();
     if (e.key === 'ArrowLeft') navLightbox(-1);
     if (e.key === 'ArrowRight') navLightbox(1);
   });
+}
 
-  $('#infoBtn').addEventListener('click', () => {
-    alert('Photography portfolio\n\nClick a folder in the menu, then click a photo.');
+function navigate(path) {
+  currentPath = path;
+  renderView();
+  window.scrollTo({ top: 0, behavior: 'instant' });
+}
+
+function folderByName(name) {
+  return data.folders.find(f => f.name === name) || null;
+}
+
+function directSubfolders(path) {
+  if (path === '') {
+    return data.folders.filter(f => !f.name.includes('/'));
+  }
+  const prefix = path + '/';
+  return data.folders.filter(f => {
+    if (!f.name.startsWith(prefix)) return false;
+    const rest = f.name.slice(prefix.length);
+    return rest.length > 0 && !rest.includes('/');
   });
 }
 
-function renderMenu() {
-  const list = $('#menuList');
-  list.innerHTML = '';
-
-  const allLi = document.createElement('li');
-  const allBtn = document.createElement('button');
-  allBtn.className = 'menu__item' + (currentFolder === null ? ' menu__item--active' : '');
-  allBtn.textContent = 'ALL';
-  allBtn.addEventListener('click', () => {
-    currentFolder = null;
-    renderView();
-    closeMenu();
-  });
-  allLi.appendChild(allBtn);
-  list.appendChild(allLi);
-
-  data.folders.forEach(folder => {
-    const depth = folder.name.split('/').length - 1;
-    const parts = folder.name.split('/');
-    const label = parts[parts.length - 1].toUpperCase();
-
-    const li = document.createElement('li');
-    const btn = document.createElement('button');
-    btn.className = 'menu__item' + (currentFolder === folder.name ? ' menu__item--active' : '');
-    btn.style.paddingLeft = (8 + depth * 20) + 'px';
-    btn.textContent = label + (folder.photos.length === 0 ? ' /' : '');
-    btn.addEventListener('click', () => {
-      currentFolder = folder.name;
-      renderView();
-      closeMenu();
-    });
-    li.appendChild(btn);
-    list.appendChild(li);
-  });
-}
-
-function allPhotos() {
-  return data.folders.flatMap(f => f.photos.map(p => ({ ...p, folder: f.name })));
-}
-
-function photosUnder(name) {
+function countPhotosUnder(name) {
   const prefix = name + '/';
   return data.folders
     .filter(f => f.name === name || f.name.startsWith(prefix))
-    .flatMap(f => f.photos.map(p => ({ ...p, folder: f.name })));
-}
-
-function ancestorChain(name) {
-  const parts = name.split('/');
-  const chain = [];
-  for (let i = 1; i <= parts.length; i++) {
-    const n = parts.slice(0, i).join('/');
-    const f = data.folders.find(x => x.name === n);
-    if (f) chain.push(f);
-  }
-  return chain;
+    .reduce((n, f) => n + f.photos.length, 0);
 }
 
 function renderView() {
-  const view = $('#view');
-  view.innerHTML = '';
+  renderBreadcrumb();
 
-  if (currentFolder === null) {
-    currentPhotos = allPhotos();
-    updateNavTitle('ALL');
-    view.appendChild(buildGrid(currentPhotos));
-    return;
-  }
+  const main = $('#explorerMain');
+  const desc = $('#explorerDesc');
+  main.innerHTML = '';
+  desc.innerHTML = '';
 
-  const current = data.folders.find(f => f.name === currentFolder);
-  if (current && current.description) {
-    const intro = document.createElement('div');
-    intro.className = 'intro';
-    const block = document.createElement('div');
-    block.className = 'intro__block';
-    const h = document.createElement('h2');
-    h.className = 'intro__title';
-    h.textContent = currentFolder.split('/').pop().toUpperCase();
-    const p = document.createElement('p');
-    p.className = 'intro__text';
-    p.textContent = current.description;
-    block.appendChild(h);
-    block.appendChild(p);
-    intro.appendChild(block);
-    view.appendChild(intro);
-  }
+  const folder = currentPath === '' ? null : folderByName(currentPath);
+  const subfolders = directSubfolders(currentPath);
+  const photos = folder ? folder.photos : [];
 
-  currentPhotos = photosUnder(currentFolder);
-  updateNavTitle(currentFolder.toUpperCase());
-
-  if (currentPhotos.length === 0) {
+  if (subfolders.length === 0 && photos.length === 0) {
     const empty = document.createElement('p');
     empty.className = 'empty';
-    empty.textContent = 'No photos yet.';
-    view.appendChild(empty);
+    empty.textContent = currentPath === ''
+      ? 'No folders yet.'
+      : 'Empty folder.';
+    main.appendChild(empty);
+  }
+
+  if (subfolders.length > 0) {
+    const section = document.createElement('section');
+    section.className = 'section';
+
+    const h = document.createElement('h3');
+    h.className = 'section__title';
+    h.textContent = 'Folders';
+    section.appendChild(h);
+
+    const grid = document.createElement('div');
+    grid.className = 'folder-grid';
+
+    subfolders.forEach(sf => {
+      const card = document.createElement('button');
+      card.className = 'folder-card';
+      card.addEventListener('click', () => navigate(sf.name));
+
+      const name = document.createElement('span');
+      name.className = 'folder-card__name';
+      name.textContent = sf.name.split('/').pop();
+
+      const count = document.createElement('span');
+      count.className = 'folder-card__count';
+      const total = countPhotosUnder(sf.name);
+      count.textContent = `${total} photo${total === 1 ? '' : 's'}`;
+
+      card.appendChild(name);
+      card.appendChild(count);
+      grid.appendChild(card);
+    });
+
+    section.appendChild(grid);
+    main.appendChild(section);
+  }
+
+  if (photos.length > 0) {
+    const section = document.createElement('section');
+    section.className = 'section';
+
+    const h = document.createElement('h3');
+    h.className = 'section__title';
+    h.textContent = 'Photos';
+    section.appendChild(h);
+
+    const grid = document.createElement('div');
+    grid.className = 'photo-grid';
+
+    photos.forEach((photo, i) => {
+      const card = document.createElement('button');
+      card.className = 'photo-card';
+      card.addEventListener('click', () => openLightbox(i, photos));
+
+      const img = document.createElement('img');
+      img.src = photo.src;
+      img.alt = photo.alt || '';
+      img.loading = 'lazy';
+      img.decoding = 'async';
+
+      const label = document.createElement('span');
+      label.className = 'photo-card__label';
+      label.textContent = photo.alt || photo.src.split('/').pop().replace(/\.[^.]+$/, '');
+
+      card.appendChild(img);
+      card.appendChild(label);
+      grid.appendChild(card);
+    });
+
+    section.appendChild(grid);
+    main.appendChild(section);
+  }
+
+  if (!folder) {
+    const p = document.createElement('p');
+    p.className = 'desc-empty';
+    p.textContent = 'Open a folder to see its description.';
+    desc.appendChild(p);
     return;
   }
 
-  view.appendChild(buildGrid(currentPhotos));
+  const title = document.createElement('h2');
+  title.className = 'desc__title';
+  title.textContent = folder.name.split('/').pop();
+  desc.appendChild(title);
+
+  const path = document.createElement('p');
+  path.className = 'desc__path';
+  path.textContent = folder.name;
+  desc.appendChild(path);
+
+  if (folder.description) {
+    const text = document.createElement('p');
+    text.className = 'desc__text';
+    text.textContent = folder.description;
+    desc.appendChild(text);
+  }
 }
 
-function buildGrid(photos) {
-  const grid = document.createElement('div');
-  grid.className = 'grid';
+function renderBreadcrumb() {
+  const bc = $('#breadcrumb');
+  bc.innerHTML = '';
 
-  photos.forEach((photo, i) => {
-    const card = document.createElement('div');
-    card.className = 'card';
-    card.addEventListener('click', () => openLightbox(i));
+  const home = document.createElement('button');
+  home.className = 'crumb';
+  home.textContent = 'Photos';
+  home.addEventListener('click', () => navigate(''));
+  bc.appendChild(home);
 
-    const wrap = document.createElement('div');
-    wrap.className = 'card__image-wrap';
+  if (currentPath === '') return;
 
-    const img = document.createElement('img');
-    img.className = 'card__image';
-    img.src = photo.src;
-    img.alt = photo.alt || '';
-    img.loading = 'lazy';
-    img.decoding = 'async';
+  const parts = currentPath.split('/');
+  let acc = '';
+  parts.forEach(part => {
+    acc = acc ? acc + '/' + part : part;
+    const path = acc;
 
-    wrap.appendChild(img);
+    const sep = document.createElement('span');
+    sep.className = 'crumb-sep';
+    sep.textContent = '/';
+    bc.appendChild(sep);
 
-    const label = document.createElement('p');
-    label.className = 'card__label';
-    label.textContent = photo.alt || photo.src.split('/').pop().replace(/\.[^.]+$/, '');
-
-    const folderTag = document.createElement('p');
-    folderTag.className = 'card__collection';
-    folderTag.textContent = photo.folder || '';
-
-    card.appendChild(wrap);
-    card.appendChild(label);
-    card.appendChild(folderTag);
-    grid.appendChild(card);
+    const btn = document.createElement('button');
+    btn.className = 'crumb';
+    btn.textContent = part;
+    btn.addEventListener('click', () => navigate(path));
+    bc.appendChild(btn);
   });
-
-  return grid;
 }
 
-function updateNavTitle(text) {
-  $('#navTitle').textContent = text;
-}
-
-function openLightbox(index) {
+function openLightbox(index, photos) {
+  lightboxPhotos = photos;
   lightboxIndex = index;
   updateLightbox();
   $('#lightbox').dataset.open = 'true';
   document.body.style.overflow = 'hidden';
 }
+
 function closeLightbox() {
   $('#lightbox').dataset.open = 'false';
   document.body.style.overflow = '';
 }
+
 function navLightbox(dir) {
-  if (!currentPhotos.length) return;
-  lightboxIndex = (lightboxIndex + dir + currentPhotos.length) % currentPhotos.length;
+  if (lightboxPhotos.length === 0) return;
+  lightboxIndex = (lightboxIndex + dir + lightboxPhotos.length) % lightboxPhotos.length;
   updateLightbox();
 }
+
 function updateLightbox() {
-  const photo = currentPhotos[lightboxIndex];
+  const photo = lightboxPhotos[lightboxIndex];
   if (!photo) return;
   $('#lbImg').src = photo.src;
   $('#lbImg').alt = photo.alt || '';
   $('#lbTitle').textContent = photo.alt || photo.src.split('/').pop().replace(/\.[^.]+$/, '');
   $('#lbDesc').textContent = photo.description || '';
-  $('#lbCounter').textContent = `${lightboxIndex + 1} / ${currentPhotos.length}`;
-}
-
-function toggleMenu() {
-  const menu = $('#menu');
-  const btn = $('#menuBtn');
-  const open = menu.dataset.open === 'true';
-  menu.dataset.open = String(!open);
-  btn.dataset.state = !open ? 'close' : 'menu';
-  btn.setAttribute('aria-expanded', String(!open));
-}
-function closeMenu() {
-  $('#menu').dataset.open = 'false';
-  $('#menuBtn').dataset.state = 'menu';
-  $('#menuBtn').setAttribute('aria-expanded', 'false');
+  $('#lbCounter').textContent = `${lightboxIndex + 1} / ${lightboxPhotos.length}`;
 }
 
 init().catch(err => {
   console.error(err);
-  $('#view').innerHTML =
-    '<p style="padding:32px;text-align:center;font-size:.9rem;">Could not load data.json. Run <code>node generate.js</code>.</p>';
+  $('#explorerMain').innerHTML =
+    '<p style="padding:32px;font-size:.85rem;">Could not load data.json. Run <code>node generate.js</code>.</p>';
 });
