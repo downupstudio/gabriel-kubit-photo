@@ -1,9 +1,27 @@
 let data = null;
-let currentPath = '';
+let currentPath = '';        
 let lightboxPhotos = [];
 let lightboxIndex = 0;
+let lastDataSignature = null;
 
 const $ = (s) => document.querySelector(s);
+
+async function fetchData() {
+  const url = `./data.json?v=${Date.now()}`;
+  const res = await fetch(url, { cache: 'no-store' });
+  if (!res.ok) throw new Error(`data.json: ${res.status}`);
+  const json = await res.json();
+
+  const sig = JSON.stringify(
+    json.folders.map((f) => ({
+      n: f.name,
+      d: f.description || '',
+      p: f.photos.map((p) => p.src + '|' + (p.description || '') + '|' + (p.thumb || '')).join('~'),
+    }))
+  );
+
+  return { json, sig };
+}
 
 function pathToHash(p) {
   if (!p) return '#/';
@@ -20,13 +38,11 @@ function hashToPath(hash) {
 function navigate(path) {
   const newHash = pathToHash(path);
   const currentHash = location.hash || '#/';
-
   if (currentHash === newHash) {
     currentPath = path;
     renderView();
     return;
   }
-
   location.hash = newHash;
 }
 
@@ -39,10 +55,16 @@ function onHashChange() {
 }
 
 async function init() {
-  const res = await fetch('./data.json');
-  data = await res.json();
+  const { json, sig } = await fetchData();
+  data = json;
+  lastDataSignature = sig;
 
   currentPath = hashToPath(location.hash);
+  if (currentPath && !data.folders.some((f) => f.name === currentPath)) {
+    currentPath = '';
+    if (location.hash !== '#/') location.hash = '#/';
+  }
+
   renderView();
 
   window.addEventListener('hashchange', onHashChange);
@@ -56,18 +78,47 @@ async function init() {
     if (e.key === 'ArrowLeft') navLightbox(-1);
     if (e.key === 'ArrowRight') navLightbox(1);
   });
+
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible') checkForUpdates();
+  });
+
+  setInterval(() => {
+    if (document.visibilityState === 'visible') checkForUpdates();
+  }, 20000);
+}
+
+async function checkForUpdates() {
+  try {
+    const { json, sig } = await fetchData();
+    if (sig === lastDataSignature) return;
+
+    data = json;
+    lastDataSignature = sig;
+
+    if (currentPath && !data.folders.some((f) => f.name === currentPath)) {
+      currentPath = '';
+      location.hash = '#/';
+      return;
+    }
+
+    renderView();
+
+    if ($('#lightbox').dataset.open === 'true') closeLightbox();
+  } catch {
+  }
 }
 
 function folderByName(name) {
-  return data.folders.find(f => f.name === name) || null;
+  return data.folders.find((f) => f.name === name) || null;
 }
 
 function directSubfolders(path) {
   if (path === '') {
-    return data.folders.filter(f => !f.name.includes('/'));
+    return data.folders.filter((f) => !f.name.includes('/'));
   }
   const prefix = path + '/';
-  return data.folders.filter(f => {
+  return data.folders.filter((f) => {
     if (!f.name.startsWith(prefix)) return false;
     const rest = f.name.slice(prefix.length);
     return rest.length > 0 && !rest.includes('/');
@@ -77,7 +128,7 @@ function directSubfolders(path) {
 function countPhotosUnder(name) {
   const prefix = name + '/';
   return data.folders
-    .filter(f => f.name === name || f.name.startsWith(prefix))
+    .filter((f) => f.name === name || f.name.startsWith(prefix))
     .reduce((n, f) => n + f.photos.length, 0);
 }
 
@@ -86,7 +137,7 @@ function renderView() {
 
   const main = $('#explorerMain');
   const desc = $('#explorerDesc');
-  main.innerHTML = '';   // clears the Loading… element
+  main.innerHTML = '';   
   desc.innerHTML = '';
 
   const folder = currentPath === '' ? null : folderByName(currentPath);
@@ -103,6 +154,7 @@ function renderView() {
   if (subfolders.length > 0) {
     const section = document.createElement('section');
     section.className = 'section';
+
     const h = document.createElement('h3');
     h.className = 'section__title';
     h.textContent = 'Folders';
@@ -111,7 +163,7 @@ function renderView() {
     const grid = document.createElement('div');
     grid.className = 'folder-grid';
 
-    subfolders.forEach(sf => {
+    subfolders.forEach((sf) => {
       const card = document.createElement('button');
       card.className = 'folder-card';
       card.addEventListener('click', () => navigate(sf.name));
@@ -137,6 +189,7 @@ function renderView() {
   if (photos.length > 0) {
     const section = document.createElement('section');
     section.className = 'section';
+
     const h = document.createElement('h3');
     h.className = 'section__title';
     h.textContent = 'Photos';
@@ -151,7 +204,7 @@ function renderView() {
       card.addEventListener('click', () => openLightbox(i, photos));
 
       const img = document.createElement('img');
-      img.src = photo.thumb || photo.src;   // thumb in the grid
+      img.src = photo.thumb || photo.src;   
       img.alt = photo.alt || '';
       img.loading = 'lazy';
       img.decoding = 'async';
@@ -182,10 +235,10 @@ function renderView() {
   title.textContent = folder.name.split('/').pop();
   desc.appendChild(title);
 
-  const path = document.createElement('p');
-  path.className = 'desc__path';
-  path.textContent = folder.name;
-  desc.appendChild(path);
+  const pathEl = document.createElement('p');
+  pathEl.className = 'desc__path';
+  pathEl.textContent = folder.name;
+  desc.appendChild(pathEl);
 
   if (folder.description) {
     const text = document.createElement('p');
@@ -209,7 +262,7 @@ function renderBreadcrumb() {
 
   const parts = currentPath.split('/');
   let acc = '';
-  parts.forEach(part => {
+  parts.forEach((part) => {
     acc = acc ? acc + '/' + part : part;
     const path = acc;
 
@@ -248,14 +301,14 @@ function navLightbox(dir) {
 function updateLightbox() {
   const photo = lightboxPhotos[lightboxIndex];
   if (!photo) return;
-  $('#lbImg').src = photo.src;  // full-res in the lightbox
+  $('#lbImg').src = photo.src;   // full-resolution in the lightbox
   $('#lbImg').alt = photo.alt || '';
   $('#lbTitle').textContent = photo.alt || photo.src.split('/').pop().replace(/\.[^.]+$/, '');
   $('#lbDesc').textContent = photo.description || '';
   $('#lbCounter').textContent = `${lightboxIndex + 1} / ${lightboxPhotos.length}`;
 }
 
-init().catch(err => {
+init().catch((err) => {
   console.error(err);
   $('#explorerMain').innerHTML =
     '<p style="padding:32px;font-size:.85rem;">Could not load data.json. Run <code>node generate.js</code>.</p>';
