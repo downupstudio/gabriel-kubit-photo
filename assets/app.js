@@ -49,6 +49,8 @@ function navigate(path) {
 }
 
 function onHashChange() {
+  if ($('#lightbox').dataset.open === 'true') closeLightbox();
+
   const path = hashToPath(location.hash);
   if (path === currentPath) return;
   currentPath = path;
