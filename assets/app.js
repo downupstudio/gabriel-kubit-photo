@@ -1,9 +1,10 @@
 let data = null;
-let currentPath = '';        
+let currentPath = '';
 let lightboxPhotos = [];
 let lightboxIndex = 0;
 let lightboxLoadToken = 0;
 let lastDataSignature = null;
+let lastFocusedBeforeLightbox = null;
 
 const $ = (s) => document.querySelector(s);
 
@@ -138,7 +139,7 @@ function renderView() {
 
   const main = $('#explorerMain');
   const desc = $('#explorerDesc');
-  main.innerHTML = '';   
+  main.innerHTML = '';
   desc.innerHTML = '';
 
   const folder = currentPath === '' ? null : folderByName(currentPath);
@@ -205,7 +206,7 @@ function renderView() {
       card.addEventListener('click', () => openLightbox(i, photos));
 
       const img = document.createElement('img');
-      img.src = photo.thumb || photo.src;   
+      img.src = photo.thumb || photo.src;
       img.alt = photo.alt || '';
       img.loading = 'lazy';
       img.decoding = 'async';
@@ -281,16 +282,36 @@ function renderBreadcrumb() {
 }
 
 function openLightbox(index, photos) {
+  lastFocusedBeforeLightbox = document.activeElement;
+
   lightboxPhotos = photos;
   lightboxIndex = index;
   updateLightbox();
+
+  document.querySelectorAll('.nav, .explorer, .noscript').forEach((el) => {
+    el.inert = true;
+    el.setAttribute('aria-hidden', 'true');
+  });
+
   $('#lightbox').dataset.open = 'true';
   document.body.style.overflow = 'hidden';
+
+  requestAnimationFrame(() => $('#lightbox').focus());
 }
 
 function closeLightbox() {
   $('#lightbox').dataset.open = 'false';
   document.body.style.overflow = '';
+
+  document.querySelectorAll('.nav, .explorer, .noscript').forEach((el) => {
+    el.inert = false;
+    el.removeAttribute('aria-hidden');
+  });
+
+  if (lastFocusedBeforeLightbox && document.contains(lastFocusedBeforeLightbox)) {
+    lastFocusedBeforeLightbox.focus();
+  }
+  lastFocusedBeforeLightbox = null;
 }
 
 function navLightbox(dir) {
@@ -316,7 +337,7 @@ function updateLightbox() {
 
   const preloader = new Image();
   preloader.onload = () => {
-    if (token !== lightboxLoadToken) return; 
+    if (token !== lightboxLoadToken) return;
     img.src = photo.src;
     img.alt = photo.alt || '';
     img.dataset.ready = 'true';

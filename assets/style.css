@@ -89,13 +89,8 @@ a {
 .explorer {
   display: grid;
   grid-template-columns: 1fr 340px;
-  min-height: calc(100vh - 64px);
+  min-height: calc(100dvh - 64px);
   margin-top: 64px;
-}
-
-.explorer__main {
-  padding: 28px 24px 60px;
-  min-width: 0;
 }
 
 .explorer__desc {
@@ -104,8 +99,13 @@ a {
   padding: 32px 24px;
   position: sticky;
   top: 64px;
-  height: calc(100vh - 64px);
+  height: calc(100dvh - 64px);
   overflow-y: auto;
+}
+
+.explorer__main {
+  padding: 28px 24px 60px;
+  min-width: 0;
 }
 
 @media (max-width: 800px) {
