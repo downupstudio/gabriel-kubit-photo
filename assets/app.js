@@ -304,32 +304,36 @@ function updateLightbox() {
   if (!photo) return;
 
   const img = $('#lbImg');
+  const loader = $('#lbLoader');
   const token = ++lightboxLoadToken;
-
-  img.classList.add('is-loading');
 
   $('#lbTitle').textContent = photo.alt || photo.src.split('/').pop().replace(/\.[^.]+$/, '');
   $('#lbDesc').textContent = photo.description || '';
   $('#lbCounter').textContent = `${lightboxIndex + 1} / ${lightboxPhotos.length}`;
 
-  const loader = new Image();
-  loader.onload = () => {
-    if (token !== lightboxLoadToken) return;
+  loader.dataset.visible = 'true';
+  img.dataset.ready = 'false';
+
+  const preloader = new Image();
+  preloader.onload = () => {
+    if (token !== lightboxLoadToken) return; 
     img.src = photo.src;
     img.alt = photo.alt || '';
-    img.classList.remove('is-loading');
+    img.dataset.ready = 'true';
+    loader.dataset.visible = 'false';
   };
-  loader.onerror = () => {
+  preloader.onerror = () => {
     if (token !== lightboxLoadToken) return;
-    img.classList.remove('is-loading');
+    loader.dataset.visible = 'false';
+    img.dataset.ready = 'true';
   };
-  loader.src = photo.src;
+  preloader.src = photo.src;
 
   if (lightboxPhotos.length > 1) {
-    const nextPhoto = lightboxPhotos[(lightboxIndex + 1) % lightboxPhotos.length];
-    const prevPhoto = lightboxPhotos[(lightboxIndex - 1 + lightboxPhotos.length) % lightboxPhotos.length];
-    if (nextPhoto) new Image().src = nextPhoto.src;
-    if (prevPhoto) new Image().src = prevPhoto.src;
+    const next = lightboxPhotos[(lightboxIndex + 1) % lightboxPhotos.length];
+    const prev = lightboxPhotos[(lightboxIndex - 1 + lightboxPhotos.length) % lightboxPhotos.length];
+    if (next) new Image().src = next.src;
+    if (prev) new Image().src = prev.src;
   }
 }
 
