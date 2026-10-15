@@ -2,6 +2,7 @@ let data = null;
 let currentPath = '';        
 let lightboxPhotos = [];
 let lightboxIndex = 0;
+let lightboxLoadToken = 0;
 let lastDataSignature = null;
 
 const $ = (s) => document.querySelector(s);
@@ -301,11 +302,35 @@ function navLightbox(dir) {
 function updateLightbox() {
   const photo = lightboxPhotos[lightboxIndex];
   if (!photo) return;
-  $('#lbImg').src = photo.src;   // full-resolution in the lightbox
-  $('#lbImg').alt = photo.alt || '';
+
+  const img = $('#lbImg');
+  const token = ++lightboxLoadToken;
+
+  img.classList.add('is-loading');
+
   $('#lbTitle').textContent = photo.alt || photo.src.split('/').pop().replace(/\.[^.]+$/, '');
   $('#lbDesc').textContent = photo.description || '';
   $('#lbCounter').textContent = `${lightboxIndex + 1} / ${lightboxPhotos.length}`;
+
+  const loader = new Image();
+  loader.onload = () => {
+    if (token !== lightboxLoadToken) return;
+    img.src = photo.src;
+    img.alt = photo.alt || '';
+    img.classList.remove('is-loading');
+  };
+  loader.onerror = () => {
+    if (token !== lightboxLoadToken) return;
+    img.classList.remove('is-loading');
+  };
+  loader.src = photo.src;
+
+  if (lightboxPhotos.length > 1) {
+    const nextPhoto = lightboxPhotos[(lightboxIndex + 1) % lightboxPhotos.length];
+    const prevPhoto = lightboxPhotos[(lightboxIndex - 1 + lightboxPhotos.length) % lightboxPhotos.length];
+    if (nextPhoto) new Image().src = nextPhoto.src;
+    if (prevPhoto) new Image().src = prevPhoto.src;
+  }
 }
 
 init().catch((err) => {

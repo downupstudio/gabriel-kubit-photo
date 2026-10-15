@@ -275,6 +275,10 @@ button {
   object-fit: contain;
   flex: 1;
   min-width: 0;
+  transition: opacity 0.15s ease;
+}
+.lightbox__img.is-loading {
+  opacity: 0.25;
 }
 .lightbox__nav {
   font-size: 1.6rem;
