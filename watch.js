@@ -5,14 +5,15 @@ const { execSync } = require('child_process');
 const ROOT = __dirname;
 const PHOTO_DIR = path.join(ROOT, 'photos');
 const IMAGE_EXT = ['.jpg', '.jpeg', '.png', '.webp', '.avif', '.gif'];
-
 const isImage = (f) => IMAGE_EXT.includes(path.extname(f).toLowerCase());
 
-function run(cmd, opts = {}) {
+const TRACKED_PATHS = ['photos', 'thumbs', 'data.json'];
+
+function run(cmd) {
   try {
-    execSync(cmd, { cwd: ROOT, stdio: 'inherit', ...opts });
+    execSync(cmd, { cwd: ROOT, stdio: 'inherit' });
     return true;
-  } catch (e) {
+  } catch {
     console.error(`✗ "${cmd}" failed`);
     return false;
   }
@@ -24,19 +25,15 @@ function snapshot() {
     let entries;
     try { entries = fs.readdirSync(dir, { withFileTypes: true }); }
     catch { return; }
-
     for (const e of entries) {
       if (e.name.startsWith('.')) continue;
       const full = path.join(dir, e.name);
-      if (e.isDirectory()) {
-        walk(full);
-      } else {
-        if (e.name === 'description.txt' || e.name.endsWith('.txt') || isImage(e.name)) {
-          try {
-            const s = fs.statSync(full);
-            out.push(`${path.relative(PHOTO_DIR, full)}|${s.size}|${s.mtimeMs}`);
-          } catch {}
-        }
+      if (e.isDirectory()) walk(full);
+      else if (e.name === 'description.txt' || e.name.endsWith('.txt') || isImage(e.name)) {
+        try {
+          const s = fs.statSync(full);
+          out.push(`${path.relative(PHOTO_DIR, full)}|${s.size}|${s.mtimeMs}`);
+        } catch {}
       }
     }
   }
@@ -45,13 +42,14 @@ function snapshot() {
 }
 
 function rebuildAndPush() {
-  console.log(`\n[${new Date().toLocaleTimeString()}] change detected → rebuilding`);
+  console.log(`\n[${new Date().toLocaleTimeString()}] change detected`);
 
   if (!run('node generate.js')) return;
 
   let status = '';
   try {
-    status = execSync('git status --porcelain', { cwd: ROOT }).toString().trim();
+    status = execSync(`git status --porcelain -- ${TRACKED_PATHS.join(' ')}`, { cwd: ROOT })
+      .toString().trim();
   } catch { return; }
 
   if (!status) {
@@ -60,20 +58,20 @@ function rebuildAndPush() {
   }
 
   const msg = `update photos ${new Date().toISOString().slice(0, 19).replace('T', ' ')}`;
-  if (!run('git add .')) return;
+  if (!run(`git add -- ${TRACKED_PATHS.join(' ')}`)) return;
   if (!run(`git commit -m "${msg}"`)) return;
   if (!run('git push')) {
-    console.error('   ✗ push failed');
+    console.error('   ✗ push failed — SSH passphrase? See notes above.');
     return;
   }
   console.log('   ✓ pushed');
 }
 
 console.log(`Watching ${PHOTO_DIR}`);
+console.log(`Only committing: ${TRACKED_PATHS.join(', ')}`);
 console.log('Ctrl+C to stop.\n');
 
 let last = snapshot();
-
 rebuildAndPush();
 
 setInterval(() => {

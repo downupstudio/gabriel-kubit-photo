@@ -1,15 +1,51 @@
 let data = null;
-let currentPath = '';       
+let currentPath = '';
 let lightboxPhotos = [];
 let lightboxIndex = 0;
 
 const $ = (s) => document.querySelector(s);
 
+function pathToHash(p) {
+  if (!p) return '#/';
+  return '#/' + p.split('/').map(encodeURIComponent).join('/');
+}
+
+function hashToPath(hash) {
+  if (!hash || hash === '#' || hash === '#/') return '';
+  const raw = hash.startsWith('#/') ? hash.slice(2) : hash.slice(1);
+  if (!raw) return '';
+  return raw.split('/').map(decodeURIComponent).join('/');
+}
+
+function navigate(path) {
+  const newHash = pathToHash(path);
+  const currentHash = location.hash || '#/';
+
+  if (currentHash === newHash) {
+    currentPath = path;
+    renderView();
+    return;
+  }
+
+  location.hash = newHash;
+}
+
+function onHashChange() {
+  const path = hashToPath(location.hash);
+  if (path === currentPath) return;
+  currentPath = path;
+  renderView();
+  window.scrollTo({ top: 0, behavior: 'instant' });
+}
+
 async function init() {
   const res = await fetch('./data.json');
   data = await res.json();
 
+  currentPath = hashToPath(location.hash);
   renderView();
+
+  window.addEventListener('hashchange', onHashChange);
 
   $('#lbClose').addEventListener('click', closeLightbox);
   $('#lbPrev').addEventListener('click', () => navLightbox(-1));
@@ -20,12 +56,6 @@ async function init() {
     if (e.key === 'ArrowLeft') navLightbox(-1);
     if (e.key === 'ArrowRight') navLightbox(1);
   });
-}
-
-function navigate(path) {
-  currentPath = path;
-  renderView();
-  window.scrollTo({ top: 0, behavior: 'instant' });
 }
 
 function folderByName(name) {
@@ -56,7 +86,7 @@ function renderView() {
 
   const main = $('#explorerMain');
   const desc = $('#explorerDesc');
-  main.innerHTML = '';
+  main.innerHTML = '';   // clears the Loading… element
   desc.innerHTML = '';
 
   const folder = currentPath === '' ? null : folderByName(currentPath);
@@ -66,16 +96,13 @@ function renderView() {
   if (subfolders.length === 0 && photos.length === 0) {
     const empty = document.createElement('p');
     empty.className = 'empty';
-    empty.textContent = currentPath === ''
-      ? 'No folders yet.'
-      : 'Empty folder.';
+    empty.textContent = currentPath === '' ? 'No folders yet.' : 'Empty folder.';
     main.appendChild(empty);
   }
 
   if (subfolders.length > 0) {
     const section = document.createElement('section');
     section.className = 'section';
-
     const h = document.createElement('h3');
     h.className = 'section__title';
     h.textContent = 'Folders';
@@ -110,7 +137,6 @@ function renderView() {
   if (photos.length > 0) {
     const section = document.createElement('section');
     section.className = 'section';
-
     const h = document.createElement('h3');
     h.className = 'section__title';
     h.textContent = 'Photos';
@@ -125,7 +151,7 @@ function renderView() {
       card.addEventListener('click', () => openLightbox(i, photos));
 
       const img = document.createElement('img');
-      img.src = photo.src;
+      img.src = photo.thumb || photo.src;   // thumb in the grid
       img.alt = photo.alt || '';
       img.loading = 'lazy';
       img.decoding = 'async';
@@ -222,7 +248,7 @@ function navLightbox(dir) {
 function updateLightbox() {
   const photo = lightboxPhotos[lightboxIndex];
   if (!photo) return;
-  $('#lbImg').src = photo.src;
+  $('#lbImg').src = photo.src;  // full-res in the lightbox
   $('#lbImg').alt = photo.alt || '';
   $('#lbTitle').textContent = photo.alt || photo.src.split('/').pop().replace(/\.[^.]+$/, '');
   $('#lbDesc').textContent = photo.description || '';

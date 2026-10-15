@@ -3,7 +3,11 @@
   margin: 0;
   padding: 0;
   border: 0;
-  outline: none;
+}
+
+:focus-visible {
+  outline: 2px solid #000;
+  outline-offset: 2px;
 }
 
 html, body {
@@ -304,4 +308,18 @@ button {
 @media (max-width: 500px) {
   .lightbox__nav { font-size: 1.2rem; padding: 4px; }
   .lightbox__body { gap: 4px; padding: 0 4px; }
+}
+
+.loading {
+  padding: 40px 0;
+  font-size: 0.75rem;
+  opacity: 0.4;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+}
+.noscript {
+  padding: 40px 20px;
+  text-align: center;
+  font-size: 0.85rem;
+  line-height: 1.5;
 }
